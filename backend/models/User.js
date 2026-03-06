@@ -25,7 +25,9 @@ const userSchema = new mongoose.Schema(
     phone:      { type: String, default: "" },
     salary:     { type: Number, default: 0 },
     joinedDate: { type: Date },
+    
   },
+  
   { timestamps: true }
 );
 

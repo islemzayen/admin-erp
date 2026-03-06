@@ -68,5 +68,13 @@ exports.updateUser = async (id, { name, email, role, department, position }) => 
     { new: true, runValidators: true }
   ).select("-password");
 };
+exports.resetPassword = async (id, newPassword) => {
+  const user = await User.findById(id);
+  if (!user) throw Object.assign(new Error("User not found"), { statusCode: 404 });
 
+  user.password = newPassword;  // pre-save hook hashes it
+  await user.save();
+
+  return { tempPassword: newPassword };  // shown once to admin
+};
 exports.deleteUser = (id) => User.findByIdAndDelete(id);

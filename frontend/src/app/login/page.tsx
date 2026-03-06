@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/context/AuthContext";
 import { useLanguage } from "@/context/LanguageContext";
 import api from "@/services/api";
+
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
@@ -23,16 +24,16 @@ export default function LoginPage() {
     try {
       const { data } = await api.post("/auth/login", { email, password });
 
-      // ✅ Save real token from backend response
       login({
         id: data.user.id,
         name: data.user.name,
         email: data.user.email,
         role: data.user.role,
-        token: data.token, // ✅ real JWT token
+        token: data.token,
       });
 
-      // Redirect based on role
+      
+
       const roleRoutes: Record<string, string> = {
         ADMIN: "/dashboard/admin",
         HR_MANAGER: "/dashboard/hr",

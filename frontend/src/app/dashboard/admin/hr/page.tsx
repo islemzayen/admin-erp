@@ -6,60 +6,37 @@ import { useLanguage } from "@/context/LanguageContext";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Users, Search, Plus, Download,
-  TrendingUp, Pencil, Trash2, X, Loader2,
+  TrendingUp, Pencil, Trash2, X, Loader2, KeyRound,
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { hrService } from "@/services/hrservice";
+import { adminService } from "@/services/adminService";
 import CalendarPicker from "@/components/CalendarPicker";
 
 interface Employee {
-  _id: string;
-  name: string;
-  position: string;
-  phone: string;
-  email: string;
-  salary: number;
-  joinedDate: string;
+  _id: string; name: string; position: string;
+  phone: string; email: string; salary: number; joinedDate: string;
 }
-
 interface FormState {
-  name: string;
-  position: string;
-  phone: string;
-  email: string;
-  salary: string;
-  joinedDate: string;
+  name: string; position: string; phone: string;
+  email: string; salary: string; joinedDate: string;
 }
-
-interface Credentials {
-  email: string;
-  password: string;
-}
+interface Credentials { email: string; password: string; }
 
 const AVATAR_COLORS = [
-  "bg-emerald-500/20 text-emerald-400",
-  "bg-blue-500/20 text-blue-400",
-  "bg-purple-500/20 text-purple-400",
-  "bg-amber-500/20 text-amber-400",
-  "bg-pink-500/20 text-pink-400",
+  "bg-emerald-500/20 text-emerald-400","bg-blue-500/20 text-blue-400",
+  "bg-purple-500/20 text-purple-400","bg-amber-500/20 text-amber-400","bg-pink-500/20 text-pink-400",
 ];
-
 const POSITIONS = ["Employee", "HR Manager"];
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        exit={{ opacity: 0, scale: 0.95 }}
-        className="bg-white dark:bg-[#0d1117] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl"
-      >
+      <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }}
+        className="bg-white dark:bg-[#0d1117] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-md p-6 shadow-2xl">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-base font-bold text-gray-900 dark:text-white">{title}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition">
-            <X size={18} />
-          </button>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:hover:text-white transition"><X size={18} /></button>
         </div>
         {children}
       </motion.div>
@@ -75,20 +52,23 @@ export default function AdminHRPage() {
   const [stats, setStats] = useState({ total: 0, active: 0, onLeave: 0, avgTenure: 0 });
 
   const [showCreate, setShowCreate] = useState(false);
-  const [showEdit, setShowEdit] = useState(false);
+  const [showEdit, setShowEdit]     = useState(false);
   const [showDelete, setShowDelete] = useState(false);
-  const [selected, setSelected] = useState<Employee | null>(null);
+  const [showReset, setShowReset]   = useState(false);
+
+  const [selected, setSelected]     = useState<Employee | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState("");
+  const [formError, setFormError]   = useState("");
   const [createdCredentials, setCreatedCredentials] = useState<Credentials | null>(null);
 
-  const emptyForm: FormState = {
-    name: "", position: "", phone: "", email: "", salary: "",
-    joinedDate: new Date().toISOString().split("T")[0],
-  };
+  const [resetPassword, setResetPassword] = useState("");
+  const [resetResult, setResetResult]     = useState<string | null>(null);
+  const [resetLoading, setResetLoading]   = useState(false);
+
+  const emptyForm: FormState = { name:"", position:"", phone:"", email:"", salary:"", joinedDate: new Date().toISOString().split("T")[0] };
   const [form, setForm] = useState<FormState>(emptyForm);
 
-  const card = "bg-white dark:bg-[#0d1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl transition-colors duration-300";
+  const card       = "bg-white dark:bg-[#0d1117] border border-gray-200 dark:border-white/[0.06] rounded-2xl transition-colors duration-300";
   const inputClass = "w-full px-3 py-2 bg-gray-100 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl text-sm text-gray-900 dark:text-white focus:outline-none focus:border-emerald-500/60 transition";
   const labelClass = "text-xs text-gray-500 uppercase tracking-widest mb-1 block";
 
@@ -98,20 +78,17 @@ export default function AdminHRPage() {
     try {
       setLoading(true);
       const [emps, st] = await Promise.all([hrService.getAllEmployees(), hrService.getStats()]);
-      setEmployees(emps);
-      setStats(st);
+      setEmployees(emps); setStats(st);
     } catch {} finally { setLoading(false); }
   };
 
   const handleCreate = async () => {
     if (!form.name || !form.position) { setFormError("Name and position are required"); return; }
-    if (form.phone && form.phone.replace(/\s/g, "").length !== 8) { setFormError("Phone number must be 8 digits"); return; }
+    if (form.phone && form.phone.replace(/\s/g,"").length !== 8) { setFormError("Phone number must be 8 digits"); return; }
     try {
       setSubmitting(true); setFormError("");
       const result = await hrService.createEmployee({ ...form, salary: Number(form.salary) || 0 });
-      await fetchAll();
-      setShowCreate(false);
-      setForm(emptyForm);
+      await fetchAll(); setShowCreate(false); setForm(emptyForm);
       setCreatedCredentials({ email: result.email, password: result.plainPassword });
     } catch (err: any) { setFormError(err.response?.data?.message || "Failed to create employee"); }
     finally { setSubmitting(false); }
@@ -119,43 +96,41 @@ export default function AdminHRPage() {
 
   const openEdit = (emp: Employee) => {
     setSelected(emp);
-    setForm({
-      name: emp.name, position: emp.position,
-      phone: emp.phone || "", email: emp.email || "",
+    setForm({ name: emp.name, position: emp.position, phone: emp.phone||"", email: emp.email||"",
       salary: emp.salary ? String(emp.salary) : "",
-      joinedDate: emp.joinedDate ? new Date(emp.joinedDate).toISOString().split("T")[0] : "",
-    });
+      joinedDate: emp.joinedDate ? new Date(emp.joinedDate).toISOString().split("T")[0] : "" });
     setFormError(""); setShowEdit(true);
   };
 
   const handleEdit = async () => {
     if (!form.name || !form.position) { setFormError("Name and position are required"); return; }
-    if (form.phone && form.phone.replace(/\s/g, "").length !== 8) { setFormError("Phone number must be 8 digits"); return; }
+    if (form.phone && form.phone.replace(/\s/g,"").length !== 8) { setFormError("Phone number must be 8 digits"); return; }
     try {
       setSubmitting(true); setFormError("");
-      await hrService.updateEmployee(selected!._id, { ...form, salary: Number(form.salary) || 0 });
+      await hrService.updateEmployee(selected!._id, { ...form, salary: Number(form.salary)||0 });
       await fetchAll(); setShowEdit(false);
     } catch (err: any) { setFormError(err.response?.data?.message || "Failed to update employee"); }
     finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
-    try {
-      setSubmitting(true);
-      await hrService.deleteEmployee(selected!._id);
-      await fetchAll(); setShowDelete(false);
-    } catch {} finally { setSubmitting(false); }
+    try { setSubmitting(true); await hrService.deleteEmployee(selected!._id); await fetchAll(); setShowDelete(false); }
+    catch {} finally { setSubmitting(false); }
   };
 
-  const formatDate = (d: string) => {
-    if (!d) return "—";
-    return new Date(d).toLocaleDateString("en-GB", { month: "short", year: "numeric" });
+  const openReset = (emp: Employee) => { setSelected(emp); setResetPassword(""); setResetResult(null); setShowReset(true); };
+
+  const handleResetPassword = async () => {
+    if (!selected || resetPassword.length < 6) return;
+    setResetLoading(true);
+    try { const res = await adminService.resetPassword(selected._id, resetPassword); setResetResult(res.tempPassword); }
+    catch { setResetResult(null); }
+    finally { setResetLoading(false); }
   };
 
+  const formatDate = (d: string) => d ? new Date(d).toLocaleDateString("en-GB", { month:"short", year:"numeric" }) : "—";
   const filtered = employees.filter(e =>
-    e.name.toLowerCase().includes(search.toLowerCase()) ||
-    e.position.toLowerCase().includes(search.toLowerCase())
-  );
+    e.name.toLowerCase().includes(search.toLowerCase()) || e.position.toLowerCase().includes(search.toLowerCase()));
 
   return (
     <ProtectedRoute allowedRoles={["ADMIN"]}>
@@ -164,9 +139,7 @@ export default function AdminHRPage() {
 
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight leading-none">
-              {t("hr")} <span className="text-emerald-400">{t("employees")}</span>
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight leading-none">{t("hr")} <span className="text-emerald-400">{t("employees")}</span></h1>
             <p className="text-xs text-gray-500 mt-1.5 uppercase tracking-widest">{t("hrDept")}</p>
           </div>
           <div className="flex items-center gap-3">
@@ -211,22 +184,19 @@ export default function AdminHRPage() {
           </div>
 
           <div className="grid px-6 py-3 text-[10px] uppercase tracking-widest text-gray-500 dark:text-gray-600 border-b border-gray-100 dark:border-white/[0.04]"
-            style={{ gridTemplateColumns: "2fr 2fr 1.5fr 1fr 80px" }}>
-            <span>{t("employee")}</span><span>{t("position")}</span>
-            <span>{t("phone")}</span><span>{t("joined")}</span><span>Actions</span>
+            style={{ gridTemplateColumns: "2fr 2fr 1.5fr 1fr 100px" }}>
+            <span>{t("employee")}</span><span>{t("position")}</span><span>{t("phone")}</span><span>{t("joined")}</span><span>Actions</span>
           </div>
 
           {loading ? (
-            <div className="flex items-center justify-center py-12 text-gray-400 gap-2">
-              <Loader2 size={16} className="animate-spin" /> Loading...
-            </div>
+            <div className="flex items-center justify-center py-12 text-gray-400 gap-2"><Loader2 size={16} className="animate-spin" /> Loading...</div>
           ) : filtered.length === 0 ? (
             <div className="py-12 text-center text-xs text-gray-400">{t("noEmployeesMatch")}</div>
           ) : (
             filtered.map((emp, i) => (
               <motion.div key={emp._id} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: i * 0.04 }}
                 className={`grid px-6 py-4 items-center hover:bg-gray-50 dark:hover:bg-white/[0.02] transition ${i < filtered.length - 1 ? "border-b border-gray-100 dark:border-white/[0.03]" : ""}`}
-                style={{ gridTemplateColumns: "2fr 2fr 1.5fr 1fr 80px" }}>
+                style={{ gridTemplateColumns: "2fr 2fr 1.5fr 1fr 100px" }}>
                 <div className="flex items-center gap-3">
                   <div className={`w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold flex-shrink-0 ${AVATAR_COLORS[i % AVATAR_COLORS.length]}`}>
                     {emp.name.split(" ").map((n) => n[0]).join("")}
@@ -239,9 +209,10 @@ export default function AdminHRPage() {
                 <p className="text-xs text-gray-500 dark:text-gray-400">{emp.position}</p>
                 <p className="text-xs text-gray-500 dark:text-gray-400">{emp.phone || "—"}</p>
                 <p className="text-xs text-gray-400 dark:text-gray-500">{formatDate(emp.joinedDate)}</p>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => openEdit(emp)} className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-500/10 transition"><Pencil size={13} /></button>
-                  <button onClick={() => { setSelected(emp); setShowDelete(true); }} className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition"><Trash2 size={13} /></button>
+                <div className="flex items-center gap-1.5">
+                  <button onClick={() => openEdit(emp)} title="Edit" className="p-1.5 rounded-lg text-blue-400 hover:bg-blue-500/10 transition"><Pencil size={13} /></button>
+                  <button onClick={() => openReset(emp)} title="Reset Password" className="p-1.5 rounded-lg text-yellow-400 hover:bg-yellow-500/10 transition"><KeyRound size={13} /></button>
+                  <button onClick={() => { setSelected(emp); setShowDelete(true); }} title="Delete" className="p-1.5 rounded-lg text-red-400 hover:bg-red-500/10 transition"><Trash2 size={13} /></button>
                 </div>
               </motion.div>
             ))
@@ -253,42 +224,24 @@ export default function AdminHRPage() {
         {showCreate && (
           <Modal title="Add Employee" onClose={() => setShowCreate(false)}>
             <div className="space-y-4">
-              <div>
-                <label className={labelClass}>Full Name</label>
-                <input className={inputClass} placeholder="Jane Doe" value={form.name}
-                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-                
-              </div>
-              <div>
-                <label className={labelClass}>Position</label>
+              <div><label className={labelClass}>Full Name</label>
+                <input className={inputClass} placeholder="Jane Doe" value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+              <div><label className={labelClass}>Position</label>
                 <select className={inputClass} value={form.position} onChange={e => setForm(f => ({ ...f, position: e.target.value }))}>
                   <option value="">— Select Position —</option>
                   {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
+                </select></div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Phone</label>
-                  <input className={inputClass} placeholder="12345678" maxLength={8} value={form.phone}
-                    onChange={e => setForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, "") }))} />
-                </div>
-                <div>
-                  <label className={labelClass}>Salary (TND)</label>
-                  <input className={inputClass} type="text" inputMode="numeric" placeholder="0" value={form.salary}
-                    onChange={e => setForm(f => ({ ...f, salary: e.target.value.replace(/\D/g, "") }))} />
-                </div>
+                <div><label className={labelClass}>Phone</label>
+                  <input className={inputClass} placeholder="12345678" maxLength={8} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value.replace(/\D/g,"") }))} /></div>
+                <div><label className={labelClass}>Salary (TND)</label>
+                  <input className={inputClass} type="text" inputMode="numeric" placeholder="0" value={form.salary} onChange={e => setForm(f => ({ ...f, salary: e.target.value.replace(/\D/g,"") }))} /></div>
               </div>
-              <CalendarPicker
-                value={form.joinedDate}
-                onChange={(date) => setForm(f => ({ ...f, joinedDate: date }))}
-                inputClass={inputClass}
-                labelClass={labelClass}
-              />
+              <CalendarPicker value={form.joinedDate} onChange={(date) => setForm(f => ({ ...f, joinedDate: date }))} inputClass={inputClass} labelClass={labelClass} />
               {formError && <p className="text-red-400 text-xs">{formError}</p>}
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowCreate(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition">Cancel</button>
-                <button onClick={handleCreate} disabled={submitting}
-                  className="flex-1 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition flex items-center justify-center gap-2">
+                <button onClick={handleCreate} disabled={submitting} className="flex-1 px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition flex items-center justify-center gap-2">
                   {submitting ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />} Add Employee
                 </button>
               </div>
@@ -299,45 +252,26 @@ export default function AdminHRPage() {
         {showEdit && selected && (
           <Modal title="Edit Employee" onClose={() => setShowEdit(false)}>
             <div className="space-y-4">
-              <div>
-                <label className={labelClass}>Full Name</label>
-                <input className={inputClass} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} />
-              </div>
-              <div>
-                <label className={labelClass}>Position</label>
+              <div><label className={labelClass}>Full Name</label>
+                <input className={inputClass} value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} /></div>
+              <div><label className={labelClass}>Position</label>
                 <select className={inputClass} value={form.position} onChange={e => setForm(f => ({ ...f, position: e.target.value }))}>
                   <option value="">— Select Position —</option>
                   {POSITIONS.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
-              </div>
+                </select></div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className={labelClass}>Phone</label>
-                  <input className={inputClass} maxLength={8} value={form.phone}
-                    onChange={e => setForm(f => ({ ...f, phone: e.target.value.replace(/\D/g, "") }))} />
-                </div>
-                <div>
-                  <label className={labelClass}>Salary (TND)</label>
-                  <input className={inputClass} type="text" inputMode="numeric" value={form.salary}
-                    onChange={e => setForm(f => ({ ...f, salary: e.target.value.replace(/\D/g, "") }))} />
-                </div>
+                <div><label className={labelClass}>Phone</label>
+                  <input className={inputClass} maxLength={8} value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value.replace(/\D/g,"") }))} /></div>
+                <div><label className={labelClass}>Salary (TND)</label>
+                  <input className={inputClass} type="text" inputMode="numeric" value={form.salary} onChange={e => setForm(f => ({ ...f, salary: e.target.value.replace(/\D/g,"") }))} /></div>
               </div>
-              <div>
-                <label className={labelClass}>Email</label>
-                <input className={inputClass} type="email" value={form.email}
-                  onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-              </div>
-              <CalendarPicker
-                value={form.joinedDate}
-                onChange={(date) => setForm(f => ({ ...f, joinedDate: date }))}
-                inputClass={inputClass}
-                labelClass={labelClass}
-              />
+              <div><label className={labelClass}>Email</label>
+                <input className={inputClass} type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} /></div>
+              <CalendarPicker value={form.joinedDate} onChange={(date) => setForm(f => ({ ...f, joinedDate: date }))} inputClass={inputClass} labelClass={labelClass} />
               {formError && <p className="text-red-400 text-xs">{formError}</p>}
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowEdit(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition">Cancel</button>
-                <button onClick={handleEdit} disabled={submitting}
-                  className="flex-1 px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-bold text-xs transition flex items-center justify-center gap-2">
+                <button onClick={handleEdit} disabled={submitting} className="flex-1 px-4 py-2 rounded-xl bg-blue-500 hover:bg-blue-400 text-white font-bold text-xs transition flex items-center justify-center gap-2">
                   {submitting ? <Loader2 size={13} className="animate-spin" /> : <Pencil size={13} />} Save Changes
                 </button>
               </div>
@@ -351,8 +285,7 @@ export default function AdminHRPage() {
               <p className="text-sm text-gray-500">Are you sure you want to delete <span className="text-white font-bold">{selected.name}</span>? This cannot be undone.</p>
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setShowDelete(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition">Cancel</button>
-                <button onClick={handleDelete} disabled={submitting}
-                  className="flex-1 px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-bold text-xs transition flex items-center justify-center gap-2">
+                <button onClick={handleDelete} disabled={submitting} className="flex-1 px-4 py-2 rounded-xl bg-red-500 hover:bg-red-400 text-white font-bold text-xs transition flex items-center justify-center gap-2">
                   {submitting ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />} Delete
                 </button>
               </div>
@@ -360,31 +293,53 @@ export default function AdminHRPage() {
           </Modal>
         )}
 
+        {showReset && selected && (
+          <Modal title="Reset Password" onClose={() => { setShowReset(false); setResetResult(null); }}>
+            {resetResult ? (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-400">Password reset for <span className="text-white font-semibold">{selected.name}</span>. Share this — shown only once.</p>
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-xl px-4 py-4 text-center space-y-1">
+                  <p className="text-[10px] text-yellow-400 uppercase tracking-widest">New Password</p>
+                  <p className="text-2xl font-mono font-bold text-yellow-300">{resetResult}</p>
+                </div>
+                <button onClick={() => { setShowReset(false); setResetResult(null); }}
+                  className="w-full py-2 rounded-xl bg-emerald-500/20 text-emerald-400 text-sm font-semibold hover:bg-emerald-500/30 transition">Done</button>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-sm text-gray-400">Set a new password for <span className="text-white font-semibold">{selected.name}</span>.</p>
+                <div><label className={labelClass}>New Password</label>
+                  <input type="text" value={resetPassword} onChange={e => setResetPassword(e.target.value)} placeholder="Min. 6 characters" className={inputClass} /></div>
+                <div className="flex gap-3 pt-1">
+                  <button onClick={() => setShowReset(false)} className="flex-1 px-4 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition">Cancel</button>
+                  <button onClick={handleResetPassword} disabled={resetLoading || resetPassword.length < 6}
+                    className="flex-1 py-2 rounded-xl bg-yellow-500/20 text-yellow-400 text-sm font-semibold hover:bg-yellow-500/30 transition disabled:opacity-40 flex items-center justify-center gap-2">
+                    {resetLoading ? <Loader2 size={13} className="animate-spin" /> : <KeyRound size={13} />} Reset Password
+                  </button>
+                </div>
+              </div>
+            )}
+          </Modal>
+        )}
+
         {createdCredentials && (
           <Modal title="Account Created" onClose={() => setCreatedCredentials(null)}>
             <div className="space-y-4">
-              <p className="text-xs text-gray-500">Share these credentials with the employee. This password will not be shown again.</p>
+              <p className="text-xs text-gray-500">Share these credentials. This password will not be shown again.</p>
               <div className="space-y-3">
-                <div>
-                  <label className={labelClass}>Email</label>
+                <div><label className={labelClass}>Email</label>
                   <div className="flex items-center gap-2">
                     <input readOnly className={inputClass} value={createdCredentials.email} />
-                    <button onClick={() => navigator.clipboard.writeText(createdCredentials.email)}
-                      className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition whitespace-nowrap">Copy</button>
-                  </div>
-                </div>
-                <div>
-                  <label className={labelClass}>Password</label>
+                    <button onClick={() => navigator.clipboard.writeText(createdCredentials.email)} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition whitespace-nowrap">Copy</button>
+                  </div></div>
+                <div><label className={labelClass}>Password</label>
                   <div className="flex items-center gap-2">
                     <input readOnly className={inputClass} value={createdCredentials.password} />
-                    <button onClick={() => navigator.clipboard.writeText(createdCredentials.password)}
-                      className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition whitespace-nowrap">Copy</button>
-                  </div>
-                </div>
+                    <button onClick={() => navigator.clipboard.writeText(createdCredentials.password)} className="px-3 py-2 rounded-xl border border-gray-200 dark:border-white/10 text-xs text-gray-500 hover:text-gray-900 dark:hover:text-white transition whitespace-nowrap">Copy</button>
+                  </div></div>
               </div>
               <div className="pt-2">
-                <button onClick={() => setCreatedCredentials(null)}
-                  className="w-full px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition">Done</button>
+                <button onClick={() => setCreatedCredentials(null)} className="w-full px-4 py-2 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-black font-bold text-xs transition">Done</button>
               </div>
             </div>
           </Modal>

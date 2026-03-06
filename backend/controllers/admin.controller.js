@@ -56,3 +56,11 @@ exports.deleteUser = async (req, reply) => {
     return error(reply, err.message);
   }
 };
+exports.resetPassword = async (req, reply) => {
+  try {
+    const result = await adminService.resetPassword(req.params.id, req.body.newPassword);
+    return success(reply, result);
+  } catch (err) {
+    return error(reply, err.message, err.statusCode || 500);
+  }
+};

@@ -2,10 +2,9 @@
 
 const { protect, requireRole } = require("../hooks/auth.hook");
 const {
-  getStats, getAllUsers, getUserById, createUser, updateUser, deleteUser,
+  getStats, getAllUsers, getUserById, createUser, updateUser, deleteUser, resetPassword,
 } = require("../controllers/admin.controller");
-const { createUserBody, updateUserBody, idParam } = require("../schemas/admin.schema");
-
+const { createUserBody, updateUserBody, idParam, resetPasswordBody } = require("../schemas/admin.schema");
 const adminOnly = [protect, requireRole("ADMIN")];
 
 async function adminRoutes(fastify, options) {
@@ -22,6 +21,11 @@ async function adminRoutes(fastify, options) {
   }, updateUser);
 
   fastify.delete("/users/:id", { preHandler: adminOnly, schema: { params: idParam } }, deleteUser);
+  fastify.patch("/users/:id/reset-password", {
+  preHandler: adminOnly,
+  schema: { body: resetPasswordBody, params: idParam },
+}, resetPassword);
 }
+
 
 module.exports = adminRoutes;

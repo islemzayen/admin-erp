@@ -30,4 +30,8 @@ export const adminService = {
     const { data } = await api.delete(`/admin/users/${id}`);
     return data;
   },
+  resetPassword: async (id: string, newPassword: string) => {
+  const { data } = await api.patch(`/admin/users/${id}/reset-password`, { newPassword });
+  return data;
+},
 };

@@ -31,5 +31,12 @@ const idParam = {
     id: { type: "string", minLength: 24, maxLength: 24 },
   },
 };
+const resetPasswordBody = {
+  type: "object",
+  required: ["newPassword"],
+  properties: {
+    newPassword: { type: "string", minLength: 6 },
+  },
+};
 
-module.exports = { createUserBody, updateUserBody, idParam };
+module.exports = { createUserBody, updateUserBody, idParam, resetPasswordBody };

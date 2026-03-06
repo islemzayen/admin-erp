@@ -7,7 +7,7 @@ const { registerBody, loginBody } = require("../schemas/auth.schema");
 async function authRoutes(fastify, options) {
   fastify.post("/register", { schema: { body: registerBody } }, register);
   fastify.post("/login",    { schema: { body: loginBody } }, login);
-  fastify.get("/me",        { preHandler: protect }, getMe);
+  fastify.get("/me",        { preHandler: [protect] }, getMe);
 }
 
 module.exports = authRoutes;
